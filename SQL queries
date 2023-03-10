@@ -1,0 +1,81 @@
+
+--List IDs of products that have been ordered. One ID appears exactly one time. Order product IDs 
+--in ascending order.
+
+select distinct product_id from order_line ol order by product_id;
+
+--List IDs of customers that have placed orders after October 27, 2019.  One ID appears exactly 
+--one time. Order customer IDs in ascending order.
+
+select distinct(customer_id) from order_header where order_date> '27-Oct-2019' order by customer_id;
+
+--List all customer names for customers who are from Salt Lake City and whose first name starts 
+--with the letter ‘J’.
+
+select customer_name from customer where city = 'Salt Lake City' and customer_name like 'J%';
+-- Guided Exercise
+-- List the product name, product price and product price after 10% discount.
+
+select product_name, product_price, ((product_price::decimal)* 0.9)::money  as discount_price from product;
+
+--List the number of products with a price higher than $100.  
+
+select count(product_name) from product where product_price > 100;
+
+--List name and price for all products that have been purchased on order 1001. Use a subquery 
+--and IN to implement this query.
+
+select product_name , product_price 
+from product
+where product_id in 
+(select product_id
+from order_line 
+where  order_id  = 1001);
+
+--List the order id and the order date for each order from an Arizona customer.  Sort the result by 
+--the date descending.
+
+select order_id,order_date
+from order_header 
+where customer_id in (
+    select customer_id 
+    from customer 
+    where upper(state_province) in ('AZ','ARIZONA')
+)
+order by order_date desc;
+
+
+--challenge excercise 1:  
+
+ALTER TABLE customer 
+ADD is_vip_customer integer; 
+
+
+update customer set is_vip_customer=1 where customer_id in 
+(
+select e.customer_id from customer c inner join order_header e on c.customer_id =e.customer_id 
+group by e.customer_id 
+having (count(e.order_id)>=10)
+)
+
+update customer set is_vip_customer=0 where customer_id in 
+(
+select e.customer_id from customer c inner join order_header e on c.customer_id =e.customer_id 
+group by o.customer_id 
+having (count(e.order_id)<10)
+) 
+
+select * from customer order by is_vip_customer desc,state_province asc,city asc;
+
+--   List the order id, date and total dollar amount for the top 10 orders by dollar amount.  
+----Sort the result by the date ascending and then the total amount descending. 
+--(hint: you will need to join tables to get product price and quantity)
+
+
+select e.order_id, e.order_date, (ol.quantity*p.product_price)as total_amount
+from order_header e inner join order_line ol
+on e.order_id =ol.order_id 
+join product p 
+on ol.product_id =p.product_id
+order by e.order_date, total_amount desc
+limit 10;
